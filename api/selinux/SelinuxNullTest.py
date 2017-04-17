@@ -13,23 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from vts.testcases.kernel.api.selinux import KernelSelinuxFileTestBase
+from vts.utils.python.file import file_utils
 
-from vts.testcases.kernel.api.proc import KernelProcFileTestBase
 
+class SelinuxNull(KernelSelinuxFileTestBase.KernelSelinuxFileTestBase):
+    """Validate /sys/fs/selinux/null permissions.
 
-class ProcShowUidStatTest(KernelProcFileTestBase.KernelProcFileTestBase):
-    '''/proc/uid_cputime/show_uid_stat provides the time a UID's processes spend
-    in user and kernel space.
-
-    This is an Android specific file.
-    '''
-
-    start = 'lines'
-    p_lines = KernelProcFileTestBase.repeat_rule('line')
-
-    def p_line(self, p):
-        'line : NUMBER COLON SPACE NUMBER SPACE NUMBER SPACE NUMBER NEWLINE'
-        p[0] = [p[1], p[4], p[6], p[8]]
+    The file should be read/write; there are no tests for content format.
+    """
 
     def get_path(self):
-        return "/proc/uid_cputime/show_uid_stat"
+        return "/sys/fs/selinux/null"
+
+    def get_permission_checker(self):
+        """Gets the function handle to validate r/w file permissions."""
+        return file_utils.IsReadWrite
