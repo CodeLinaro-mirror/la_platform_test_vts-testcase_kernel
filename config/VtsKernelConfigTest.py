@@ -28,7 +28,7 @@ from vts.runners.host import const
 from vts.runners.host import keys
 from vts.runners.host import test_runner
 from vts.utils.python.controllers import android_device
-from vts.utils.python.file import file_utils
+from vts.utils.python.file import target_file_utils
 
 
 class VtsKernelConfigTest(base_test.BaseTestClass):
@@ -43,9 +43,7 @@ class VtsKernelConfigTest(base_test.BaseTestClass):
     SUPPORTED_KERNEL_VERSIONS = ["3.18", "4.4", "4.9"]
 
     def setUpClass(self):
-        required_params = [
-            keys.ConfigKeys.IKEY_DATA_FILE_PATH
-        ]
+        required_params = [keys.ConfigKeys.IKEY_DATA_FILE_PATH]
         self.getUserParams(required_params)
         self.dut = self.registerController(android_device)[0]
         self.dut.shell.InvokeTerminal(
@@ -71,22 +69,51 @@ class VtsKernelConfigTest(base_test.BaseTestClass):
         logging.info("Detected kernel version: %s", kernel_version)
 
         asserts.assertTrue(kernel_version in self.SUPPORTED_KERNEL_VERSIONS,
-                           "Detected kernel version '%s' is not one of %s"
-                           % (kernel_version, self.SUPPORTED_KERNEL_VERSIONS))
+                           "Detected kernel version '%s' is not one of %s" %
+                           (kernel_version, self.SUPPORTED_KERNEL_VERSIONS))
 
         return kernel_version
 
-    def parseConfigFileToDict(self, file):
+    def checkKernelArch(self, configs):
+        """Find arch of the device kernel.
+
+        Uses the kernel configuration to determine the architecture
+        it is compiled for.
+
+        Args:
+            configs: dict containing device kernel configuration options
+
+        Returns:
+            A string containing the architecture of the device kernel. If
+            the architecture cannot be determined, an empty string is
+            returned.
+        """
+
+        CONFIG_ARM = "CONFIG_ARM"
+        CONFIG_ARM64 = "CONFIG_ARM64"
+        CONFIG_X86 = "CONFIG_X86"
+
+        if CONFIG_ARM in configs and configs[CONFIG_ARM] == "y":
+            return "arm"
+        elif CONFIG_ARM64 in configs and configs[CONFIG_ARM64] == "y":
+            return "arm64"
+        elif CONFIG_X86 in configs and configs[CONFIG_X86] == "y":
+            return "x86"
+        else:
+            print "Unable to determine kernel architecture."
+            return ""
+
+    def parseConfigFileToDict(self, file, configs):
         """Parse kernel config file to a dictionary.
 
         Args:
             file: file object, android-base.cfg or unzipped /proc/config.gz
+            configs: dict to which config options in file will be added
 
         Returns:
             dict: {config_name: config_state}
         """
         config_lines = [line.rstrip("\n") for line in file.readlines()]
-        configs = dict()
 
         for line in config_lines:
             if line.startswith("#") and line.endswith("is not set"):
@@ -107,31 +134,49 @@ class VtsKernelConfigTest(base_test.BaseTestClass):
         return configs
 
     def testKernelConfigs(self):
-        """Ensures all configs conform to android-base.cfg requirements.
+        """Ensures all kernel configs conform to Android requirements.
 
         Detects kernel version of device and validates against appropriate
-        Common Android Kernel android-base.cfg.
+        Common Android Kernel android-base.cfg and Android Treble
+        requirements.
         """
         logging.info("Testing existence of %s" % self.PROC_FILE_PATH)
-        file_utils.assertPermissionsAndExistence(
-            self.shell, self.PROC_FILE_PATH, file_utils.IsReadOnly)
+        target_file_utils.assertPermissionsAndExistence(
+            self.shell, self.PROC_FILE_PATH, target_file_utils.IsReadOnly)
 
         logging.info("Validating kernel version of device.")
         kernel_version = self.checkKernelVersion()
 
-        config_file_path = os.path.join(self.data_file_path,
-            self.KERNEL_CONFIG_FILE_PATH, "android-" + kernel_version,
-            "android-base.cfg")
+        # Pull configs from the universal config file.
+        configs = dict()
+        config_file_path = os.path.join(
+            self.data_file_path, self.KERNEL_CONFIG_FILE_PATH,
+            "android-" + kernel_version, "android-base.cfg")
         with open(config_file_path, 'r') as config_file:
-            configs = self.parseConfigFileToDict(config_file)
+            configs = self.parseConfigFileToDict(config_file, configs)
 
+        # Pull configs from device.
+        device_configs = dict()
         self.dut.adb.pull("%s %s" % (self.PROC_FILE_PATH, self._temp_dir))
         logging.info("Adb pull %s to %s", self.PROC_FILE_PATH, self._temp_dir)
 
         localpath = os.path.join(self._temp_dir, "config.gz")
         with gzip.open(localpath, "rb") as device_config_file:
-            device_configs = self.parseConfigFileToDict(device_config_file)
+            device_configs = self.parseConfigFileToDict(
+                device_config_file, device_configs)
 
+        # Check device architecture and pull arch-specific configs.
+        kernelArch = self.checkKernelArch(device_configs)
+        if kernelArch is not "":
+            config_file_path = os.path.join(self.data_file_path,
+                                            self.KERNEL_CONFIG_FILE_PATH,
+                                            "android-" + kernel_version,
+                                            "android-base-%s.cfg" % kernelArch)
+            if os.path.isfile(config_file_path):
+                with open(config_file_path, 'r') as config_file:
+                    configs = self.parseConfigFileToDict(config_file, configs)
+
+        # Determine any deviations from the required configs.
         should_be_enabled = []
         should_not_be_set = []
         incorrect_config_state = []
@@ -148,6 +193,10 @@ class VtsKernelConfigTest(base_test.BaseTestClass):
                   device_configs[config_name] != config_state):
                 incorrect_config_state.append(config_name + "=" +
                                               device_configs[config_name])
+
+        if ("CONFIG_OF" not in device_configs and
+                "CONFIG_ACPI" not in device_configs):
+            should_be_enabled.append("CONFIG_OF | CONFIG_ACPI")
 
         asserts.assertTrue(
             len(should_be_enabled) == 0 and len(should_not_be_set) == 0 and

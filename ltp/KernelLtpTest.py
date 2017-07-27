@@ -26,15 +26,18 @@ from vts.runners.host import asserts
 from vts.runners.host import base_test
 from vts.runners.host import const
 from vts.runners.host import keys
+from vts.runners.host import records
 from vts.runners.host import test_runner
 from vts.utils.python.common import cmd_utils
-from vts.utils.python.controllers import android_device
+from vts.utils.python.common import list_utils
 
 from vts.testcases.kernel.ltp import test_cases_parser
 from vts.testcases.kernel.ltp import environment_requirement_checker as env_checker
 from vts.testcases.kernel.ltp.shell_environment import shell_environment
 from vts.testcases.kernel.ltp import ltp_enums
 from vts.testcases.kernel.ltp import ltp_configs
+from vts.testcases.kernel.ltp.configs import stable_tests
+from vts.testcases.kernel.ltp.configs import disabled_tests
 
 
 class KernelLtpTest(base_test.BaseTestClass):
@@ -80,32 +83,33 @@ class KernelLtpTest(base_test.BaseTestClass):
         logging.info("%s: %s", ltp_enums.ConfigKeys.NUMBER_OF_THREADS,
                      self.number_of_threads)
 
-        self.include_filter = self.ExpandFilter(self.include_filter)
-        self.exclude_filter = self.ExpandFilter(self.exclude_filter)
-
-        self._dut = self.registerController(android_device)[0]
+        self._dut = self.android_devices[0]
         logging.info("product_type: %s", self._dut.product_type)
-        self._dut.shell.InvokeTerminal("one")
-        self.shell = self._dut.shell.one
+        self.shell = self._dut.shell
 
         self._requirement = env_checker.EnvironmentRequirementChecker(
             self.shell)
         self._shell_env = shell_environment.ShellEnvironment(self.shell)
 
-        disabled_tests = self.ExpandFilter(ltp_configs.DISABLED_TESTS)
-        staging_tests = self.ExpandFilter(ltp_configs.STAGING_TESTS)
-        self._testcases = test_cases_parser.TestCasesParser(
-            self.data_file_path, self.filterOneTest, disabled_tests,
-            staging_tests)
+        stable_test_list = self.ExpandFilterBitness(stable_tests.STABLE_TESTS)
+        disabled_test_list = self.ExpandFilterBitness(disabled_tests.DISABLED_TESTS)
 
-        self._env = {ltp_enums.ShellEnvKeys.TMP: ltp_configs.TMP,
-                     ltp_enums.ShellEnvKeys.TMPBASE: ltp_configs.TMPBASE,
-                     ltp_enums.ShellEnvKeys.LTPTMP: ltp_configs.LTPTMP,
-                     ltp_enums.ShellEnvKeys.TMPDIR: ltp_configs.TMPDIR,
-                     ltp_enums.ShellEnvKeys.LTP_DEV_FS_TYPE:
-                     ltp_configs.LTP_DEV_FS_TYPE,
-                     ltp_enums.ShellEnvKeys.LTPROOT: ltp_configs.LTPDIR,
-                     ltp_enums.ShellEnvKeys.PATH: ltp_configs.PATH}
+        self._testcases = test_cases_parser.TestCasesParser(
+            self.data_file_path,
+            self.filterOneTest,
+            stable_test_list,
+            disabled_test_list)
+
+        self._env = {
+            ltp_enums.ShellEnvKeys.TMP: ltp_configs.TMP,
+            ltp_enums.ShellEnvKeys.TMPBASE: ltp_configs.TMPBASE,
+            ltp_enums.ShellEnvKeys.LTPTMP: ltp_configs.LTPTMP,
+            ltp_enums.ShellEnvKeys.TMPDIR: ltp_configs.TMPDIR,
+            ltp_enums.ShellEnvKeys.LTP_DEV_FS_TYPE:
+            ltp_configs.LTP_DEV_FS_TYPE,
+            ltp_enums.ShellEnvKeys.LTPROOT: ltp_configs.LTPDIR,
+            ltp_enums.ShellEnvKeys.PATH: ltp_configs.PATH
+        }
 
     @property
     def shell(self):
@@ -117,38 +121,16 @@ class KernelLtpTest(base_test.BaseTestClass):
         """Set shell object"""
         self._shell = shell
 
-    def ExpandFilter(self, input_list):
-        '''Expand filter items with bitness suffix.
-
-        If a filter item contains bitness suffix, only test name with that tag will be included
-        in output.
-        Otherwise, both 32bit and 64bit suffix will be paired to the test name in output
-        list.
-
-        Args:
-            input_list: list of string, the list to expand
-
-        Returns:
-            A list of string
-        '''
-        result = []
-        for item in input_list:
-            if (item.endswith(const.SUFFIX_32BIT) or
-                    item.endswith(const.SUFFIX_64BIT)):
-                result.append(item)
-            else:
-                result.append("%s_%s" % (item, const.SUFFIX_32BIT))
-                result.append("%s_%s" % (item, const.SUFFIX_64BIT))
-        return result
-
     def PreTestSetup(self, test_bit):
         """Setups that needs to be done before any tests."""
-        replacements = {'#!/bin/sh': '#!/system/bin/sh',
-                        '#! /bin/sh': '#!/system/bin/sh',
-                        '#!/bin/bash': '#!/system/bin/sh',
-                        '#! /bin/bash': '#!/system/bin/sh',
-                        'bs=1M': 'bs=1m',
-                        '/var/run': ltp_configs.TMP}
+        replacements = {
+            '#!/bin/sh': '#!/system/bin/sh',
+            '#! /bin/sh': '#!/system/bin/sh',
+            '#!/bin/bash': '#!/system/bin/sh',
+            '#! /bin/bash': '#!/system/bin/sh',
+            'bs=1M': 'bs=1m',
+            '/var/run': ltp_configs.TMP
+        }
         src_host = os.path.join(self.data_file_path, 'DATA', test_bit, 'ltp')
 
         count = 0
@@ -259,7 +241,10 @@ class KernelLtpTest(base_test.BaseTestClass):
 
         test_cases = list(
             self._testcases.Load(
-                ltp_configs.LTPDIR, n_bit=n_bit, run_staging=self.run_staging))
+                ltp_configs.LTPDIR,
+                n_bit,
+                self.include_filter,
+                run_staging=self.run_staging))
 
         logging.info("Checking binary exists for all test cases.")
         self._requirement.ltp_bin_host_path = os.path.join(
@@ -350,8 +335,10 @@ class KernelLtpTest(base_test.BaseTestClass):
 
         failed_multithread_tests = set()
         with futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
-            fs = [executor.submit(self.RunLtpWorker, q, args, name_func, i)
-                  for i in xrange(n_workers)]
+            fs = [
+                executor.submit(self.RunLtpWorker, q, args, name_func, i)
+                for i in xrange(n_workers)
+            ]
 
             failed_test_sets = map(futures.Future.result, fs)
             for failed_test_set in failed_test_sets:
@@ -393,7 +380,7 @@ class KernelLtpTest(base_test.BaseTestClass):
             # Check whether test case is filtered out by base_test's filtering method
             if test_case.is_filtered:
                 self.InternalResultReportMultiThread(test_name, asserts.skipIf,
-                                                     (False, test_case.note))
+                                                     (True, test_case.note))
                 continue
             logging.info("Worker {} starts checking requirement "
                          "for '{}'.".format(id, test_case))
@@ -404,7 +391,7 @@ class KernelLtpTest(base_test.BaseTestClass):
                 logging.info("Worker {} reports requirement "
                              "not satisfied for '{}'.".format(id, test_case))
                 self.InternalResultReportMultiThread(test_name, asserts.skipIf,
-                                                     (False, test_case.note))
+                                                     (True, test_case.note))
                 continue
 
             cmd = "export {envp} && {commands}".format(
@@ -443,7 +430,8 @@ class KernelLtpTest(base_test.BaseTestClass):
             **kwargs: any additional keyword arguments for runner
         """
         self._report_thread_lock.acquire()
-        self.results.requested.append(test_name)
+        tr_record = records.TestResultRecord(test_name, self.TAG)
+        self.results.requested.append(tr_record)
         try:
             self.execOneTest(test_name, function, args, **kwargs)
         except Exception as e:
@@ -473,6 +461,10 @@ class KernelLtpTest(base_test.BaseTestClass):
         if not self._dut.is64Bit:
             logging.info('Target device does not support 64 bit tests.')
             return
+        if self.abi_bitness != None and self.abi_bitness != '64':
+            logging.info('Skipped 64 bit tests on %s bit ABI.',
+                         self.abi_bitness)
+            return
 
         self.TestNBits(self._64BIT)
 
@@ -480,6 +472,10 @@ class KernelLtpTest(base_test.BaseTestClass):
         """Runs all 32-bit LTP test cases."""
         if not self.run_32bit:
             logging.info('User specified not to run 32 bit version LTP tests.')
+            return
+        if self.abi_bitness != None and self.abi_bitness != '32':
+            logging.info('Skipped 32 bit tests on %s bit ABI.',
+                         self.abi_bitness)
             return
 
         self.TestNBits(self._32BIT)
