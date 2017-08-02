@@ -39,6 +39,7 @@ from vts.testcases.kernel.ltp import ltp_configs
 from vts.testcases.kernel.ltp.configs import stable_tests
 from vts.testcases.kernel.ltp.configs import disabled_tests
 
+RANDOM_SEED = 0
 
 class KernelLtpTest(base_test.BaseTestClass):
     """Runs the LTP (Linux Test Project) test cases against Android OS kernel.
@@ -138,14 +139,14 @@ class KernelLtpTest(base_test.BaseTestClass):
             for filename in filenames:
                 filepath = os.path.join(dirpath, filename)
                 content = ''
-                with open(filepath, 'r') as f:
+                with open(filepath, 'rb') as f:
                     content = f.read()
                 content_replaced = content
                 for key in replacements:
                     content_replaced = content_replaced.replace(
                         key, replacements[key])
                 if content_replaced != content:
-                    with open(filepath, 'w') as f:
+                    with open(filepath, 'wb') as f:
                         f.write(content_replaced)
                     count += 1
         logging.info('Finished replacing script contents from %s files', count)
@@ -323,6 +324,7 @@ class KernelLtpTest(base_test.BaseTestClass):
             name_func=name_func)
 
         # Shuffle the tests to reduce resource competition probability
+        random.seed(RANDOM_SEED)
         random.shuffle(settings_multithread)
 
         # Create a queue for thread workers to pull tasks
