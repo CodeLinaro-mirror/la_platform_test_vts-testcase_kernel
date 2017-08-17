@@ -41,6 +41,7 @@ from vts.testcases.kernel.ltp.configs import disabled_tests
 
 RANDOM_SEED = 0
 
+
 class KernelLtpTest(base_test.BaseTestClass):
     """Runs the LTP (Linux Test Project) test cases against Android OS kernel.
 
@@ -69,19 +70,27 @@ class KernelLtpTest(base_test.BaseTestClass):
     def setUpClass(self):
         """Creates a remote shell instance, and copies data files."""
         required_params = [
-            keys.ConfigKeys.IKEY_DATA_FILE_PATH,
-            keys.ConfigKeys.KEY_TEST_SUITE, ltp_enums.ConfigKeys.RUN_STAGING,
-            ltp_enums.ConfigKeys.RUN_32BIT, ltp_enums.ConfigKeys.RUN_64BIT,
-            ltp_enums.ConfigKeys.NUMBER_OF_THREADS
+            keys.ConfigKeys.IKEY_DATA_FILE_PATH, keys.ConfigKeys.KEY_TEST_SUITE
         ]
         self.getUserParams(required_params)
+
+        self.run_32bit = self.getUserParam(
+            ltp_enums.ConfigKeys.RUN_32BIT, default_value=True)
+        self.run_64bit = self.getUserParam(
+            ltp_enums.ConfigKeys.RUN_64BIT, default_value=True)
+        self.run_staging = self.getUserParam(
+            ltp_enums.ConfigKeys.RUN_STAGING, default_value=False)
 
         logging.info("%s: %s", keys.ConfigKeys.IKEY_DATA_FILE_PATH,
                      self.data_file_path)
         logging.info("%s: %s", keys.ConfigKeys.KEY_TEST_SUITE, self.test_suite)
         logging.info("%s: %s", ltp_enums.ConfigKeys.RUN_STAGING,
-                     self.run_staging)
-        logging.info("%s: %s", ltp_enums.ConfigKeys.NUMBER_OF_THREADS,
+                     self.run_staging),
+
+        self.number_of_threads = self.getUserParam(
+            ltp_enums.ConfigKeys.LTP_NUMBER_OF_THREADS,
+            default_value=ltp_configs.DEFAULT_NUMBER_OF_THREADS)
+        logging.info("%s: %s", ltp_enums.ConfigKeys.LTP_NUMBER_OF_THREADS,
                      self.number_of_threads)
 
         self._dut = self.android_devices[0]
@@ -240,12 +249,17 @@ class KernelLtpTest(base_test.BaseTestClass):
         self.PreTestSetup(test_bit)
         self.PushFiles(test_bit)
 
+        is_low_mem = self._dut.getProp('ro.config.low_ram').lower() == 'true'
+        if is_low_mem:
+            logging.info('Device is configured as a low RAM device.')
+
         test_cases = list(
             self._testcases.Load(
                 ltp_configs.LTPDIR,
                 n_bit,
                 self.include_filter,
-                run_staging=self.run_staging))
+                run_staging=self.run_staging,
+                is_low_mem=is_low_mem))
 
         logging.info("Checking binary exists for all test cases.")
         self._requirement.ltp_bin_host_path = os.path.join(
