@@ -31,10 +31,8 @@ class KernelApiSysfsTest(base_test.BaseTestClass):
     '''Test cases which check sysfs files.'''
 
     def setUpClass(self):
-        self.dut = self.registerController(android_device)[0]
-        self.dut.shell.InvokeTerminal(
-            'default')  # creates a remote shell instance.
-        self.shell = self.dut.shell.default
+        self.dut = self.android_devices[0]
+        self.shell = self.dut.shell
 
     def ConvertToInteger(self, text):
         '''Check whether a given text is interger.
@@ -100,9 +98,7 @@ class KernelApiSysfsTest(base_test.BaseTestClass):
     def testAndroidUSB(self):
         '''Check for the existence of required files in /sys/class/android_usb.
         '''
-        f_midi = '/sys/class/android_usb/android0/f_midi/alsa'
         state = '/sys/class/android_usb/android0/state'
-        self.IsReadOnly(f_midi)
         self.IsReadOnly(state)
         contents = target_file_utils.ReadFileContent(state, self.shell).strip()
         asserts.assertTrue(contents in
