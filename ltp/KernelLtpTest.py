@@ -60,8 +60,8 @@ class KernelLtpTest(base_test.BaseTestClass):
                            the number is greater than 0, that number of threads
                            will be created to run the tests.
     """
-    _32BIT = "32"
-    _64BIT = "64"
+    _32BIT = 32
+    _64BIT = 64
     _PASS = 0
     _SKIP = 1
     _FAIL = -1
@@ -204,9 +204,7 @@ class KernelLtpTest(base_test.BaseTestClass):
             return (self._FAIL, "Command result is malformed.")
 
         # Test case is not for the current configuration, SKIP
-        if ((ret_code == ltp_enums.TestExitCode.TCONF and
-             'TPASS' not in stdout) or
-            (ret_code == ltp_enums.TestExitCode.TPASS and 'CONF' in stdout)):
+        if (ret_code == ltp_enums.TestExitCode.TCONF):
             return (self._SKIP, "Incompatible test skipped: TCONF")
         elif ret_code not in (ltp_enums.TestExitCode.TCONF,
                               ltp_enums.TestExitCode.TPASS):
@@ -247,7 +245,7 @@ class KernelLtpTest(base_test.BaseTestClass):
             n_bit: int, bitness
         """
         test_bit = 'nativetest'
-        if n_bit == 64:
+        if n_bit == self._64BIT:
             test_bit += '64'
         self.PreTestSetup(test_bit)
         self.PushFiles(test_bit)
