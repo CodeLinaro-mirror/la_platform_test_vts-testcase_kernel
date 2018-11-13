@@ -122,7 +122,6 @@ DISABLED_TESTS = [
     'pipes.pipeio_6',
     'pipes.pipeio_8',
     'sched.trace_sched01',
-    'syscalls.accept4_01', # b/30688574
     'syscalls.access04',
     'syscalls.alarm02', # b/112423802
     'syscalls.cve-2017-5669', # b/71416706
@@ -168,7 +167,6 @@ DISABLED_TESTS = [
     'syscalls.nftw6401',
     'syscalls.nice04',
     'syscalls.open08',
-    'syscalls.open11',
     'syscalls.open13', # https://android-review.googlesource.com/#/c/127908/
     'syscalls.perf_event_open02', # b/30675443
     'syscalls.prot_hsymlinks',
