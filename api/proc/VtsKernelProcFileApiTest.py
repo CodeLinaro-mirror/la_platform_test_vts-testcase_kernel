@@ -38,6 +38,7 @@ from vts.testcases.kernel.api.proc import ProcShowUidStatTest
 from vts.testcases.kernel.api.proc import ProcStatTest
 from vts.testcases.kernel.api.proc import ProcUidIoStatsTest
 from vts.testcases.kernel.api.proc import ProcUidTimeInStateTest
+from vts.testcases.kernel.api.proc import ProcUidConcurrentTimeTests
 from vts.testcases.kernel.api.proc import ProcUidCpuPowerTests
 from vts.testcases.kernel.api.proc import ProcVersionTest
 from vts.testcases.kernel.api.proc import ProcVmallocInfoTest
@@ -103,6 +104,8 @@ TEST_OBJECTS = {
     ProcStatTest.ProcStatTest(),
     ProcUidIoStatsTest.ProcUidIoStatsTest(),
     ProcUidTimeInStateTest.ProcUidTimeInStateTest(),
+    ProcUidConcurrentTimeTests.ProcUidConcurrentActiveTimeTest(),
+    ProcUidConcurrentTimeTests.ProcUidConcurrentPolicyTimeTest(),
     ProcUidCpuPowerTests.ProcUidCpuPowerTimeInStateTest(),
     ProcUidCpuPowerTests.ProcUidCpuPowerConcurrentActiveTimeTest(),
     ProcUidCpuPowerTests.ProcUidCpuPowerConcurrentPolicyTimeTest(),
@@ -210,12 +213,6 @@ class VtsKernelProcFileApiTest(base_test.BaseTestClass):
 
         # Reboot the device.
         self.dut.adb.shell("echo b > %s" % filepath)
-        asserts.assertFalse(self.dut.hasBooted(), "Device is still alive.")
-        self.dut.waitForBootCompletion()
-        self.dut.rootAdb()
-
-        # Crash the system.
-        self.dut.adb.shell("echo c > %s" % filepath)
         asserts.assertFalse(self.dut.hasBooted(), "Device is still alive.")
         self.dut.waitForBootCompletion()
         self.dut.rootAdb()
