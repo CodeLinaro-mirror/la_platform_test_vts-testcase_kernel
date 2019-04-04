@@ -1,6 +1,6 @@
 #
-# Copyright (C) 2018 The Android Open Source Project
-
+# Copyright (C) 2019 The Android Open Source Project
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,5 +18,6 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := VtsKernelNetBpfTest
-include test/vts/tools/build/Android.host_config.mk
+LOCAL_MODULE := VtsKernelDynamicPartitionsTest
+VTS_CONFIG_SRC_DIR := testcases/kernel/dynamic_partitions
+-include test/vts/tools/build/Android.host_config.mk
