@@ -18,12 +18,14 @@ cc_test {
     name: "vts_test_binary_bpf_module",
     srcs: ["BpfTest.cpp"],
     shared_libs: [
+        "libcgrouprc",
         "libcutils",
         "libutils",
         "liblog",
         "libbase",
     ],
     static_libs: [
+        "libbpf",
         "libbpf_android",
         "libnetdutils",
         "libprocessgroup",
@@ -35,17 +37,21 @@ cc_test {
         "-Werror",
         "-Wno-unused-variable",
     ],
-    required: [
-        "bpf_vts_kern.o",
+    data: [
+        ":kern.o",
     ],
 
 }
 
 bpf {
-    name: "bpf_vts_kern.o",
-    srcs: ["bpf_test.c"],
+    name: "kern.o",
+    srcs: ["kern.c"],
     cflags: [
         "-Wall",
         "-Werror",
     ],
+}
+
+vts_config {
+    name: "VtsKernelNetBpfTest",
 }
