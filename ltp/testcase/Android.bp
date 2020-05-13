@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2018 The Android Open Source Project
+// Copyright (C) 2020 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,29 +14,17 @@
 // limitations under the License.
 //
 
-cc_test {
-    name: "vts_test_binary_bow_module",
-    srcs: ["BowTest.cpp"],
-    shared_libs: [
-        "libcutils",
-        "libutils",
-        "liblog",
-        "libbase",
-    ],
-    static_libs: [
-        "libdm",
-        "libext2_uuid",
-        "libtestUtil",
-    ],
-    cflags: [
-        "-fno-strict-aliasing",
-        "-Wall",
-        "-Werror",
-        "-Wno-unused-variable",
-    ],
-    test_suites: [
-        "vts",
-    ],
-    require_root: true,
-    auto_gen_config: true,
+sh_test {
+    name: "vts_ltp_test_arm_64",
+    src: "phony_ltp_test_arm64.sh",
+    test_suites: ["vts"],
+    test_config: "vts_ltp_test_arm_64.xml",
+}
+
+
+sh_test {
+    name: "vts_ltp_test_arm",
+    src: "phony_ltp_test_arm.sh",
+    test_suites: ["vts"],
+    test_config: "vts_ltp_test_arm.xml",
 }
