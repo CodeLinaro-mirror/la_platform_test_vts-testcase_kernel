@@ -135,7 +135,9 @@ class BpfRaceTest : public ::testing::Test {
     std::string progSrcPath = BPF_SRC_PATH BPF_SRC_NAME;
     // 0 != 2 means ENOENT - ie. missing bpf program.
     ASSERT_EQ(0, access(progSrcPath.c_str(), R_OK) ? errno : 0);
-    ASSERT_EQ(0, android::bpf::loadProg(progSrcPath.c_str()));
+    bool critical = true;
+    ASSERT_EQ(0, android::bpf::loadProg(progSrcPath.c_str(), &critical));
+    ASSERT_EQ(false, critical);
 
     EXPECT_RESULT_OK(cookieStatsMap[0].init(TEST_STATS_MAP_A_PATH));
     EXPECT_RESULT_OK(cookieStatsMap[1].init(TEST_STATS_MAP_B_PATH));
@@ -146,7 +148,7 @@ class BpfRaceTest : public ::testing::Test {
     // Start several threads to send and receive packets with an eBPF program
     // attached to the socket.
     stop = false;
-    int prog_fd = bpfFdGet(TEST_PROG_PATH, 0);
+    int prog_fd = retrieveProgram(TEST_PROG_PATH);
     EXPECT_RESULT_OK(configurationMap.writeValue(ACTIVE_MAP_KEY, 0, BPF_ANY));
 
     for (int i = 0; i < NUM_SOCKETS; i++) {
