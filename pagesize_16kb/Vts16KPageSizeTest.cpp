@@ -28,6 +28,12 @@ class Vts16KPageSizeTest : public ::testing::Test {
         return android::base::GetIntProperty("ro.vendor.api_level", __ANDROID_API_S__);
     }
 
+    static bool NoBionicPageSizeMacroProperty() {
+        // "ro.product.build.no_bionic_page_size_macro" was added in Android V and is
+        // set to true when Android is build with PRODUCT_NO_BIONIC_PAGE_SIZE_MACRO := true.
+        return android::base::GetBoolProperty("ro.product.build.no_bionic_page_size_macro", false);
+    }
+
     static std::string Architecture() { return android::base::GetProperty("ro.bionic.arch", ""); }
 
     static ssize_t MaxPageSize(const std::string& filepath) {
@@ -59,13 +65,15 @@ class Vts16KPageSizeTest : public ::testing::Test {
         }
     }
 
+    /*
+     * x86_64 also needs to be at least 16KB aligned, since Android
+     * supports page size emulation in x86_64 for app development.
+     */
     size_t RequiredMaxPageSize() {
-        if (mArch == "x86_64") {
-            return 4096;
-        } else if (mArch == "arm64" || mArch == "aarch64") {
-            return 16384;
+        if (mArch == "arm64" || mArch == "aarch64" || mArch == "x86_64") {
+            return 0x4000;
         } else {
-            return -1;
+            return 0x1000;
         }
     }
 
@@ -75,6 +83,7 @@ class Vts16KPageSizeTest : public ::testing::Test {
 /**
  * Checks the max-page-size of init against the architecture's
  * required max-page-size.
+ *
  */
 TEST_F(Vts16KPageSizeTest, InitMaxPageSizeTest) {
     constexpr char initPath[] = "/system/bin/init";
@@ -89,4 +98,17 @@ TEST_F(Vts16KPageSizeTest, InitMaxPageSizeTest) {
     ASSERT_EQ(initMaxPageSize % expectedMaxPageSize, 0)
             << "ELF " << initPath << " with page size " << initMaxPageSize
             << " was not built with the required max-page-size " << expectedMaxPageSize;
+}
+
+/**
+ * Checks if the vendor's build was compiled with the define
+ * PRODUCT_NO_BIONIC_PAGE_SIZE_MACRO based on the product property
+ * ro.product.build.no_bionic_page_size_macro.
+ */
+TEST_F(Vts16KPageSizeTest, NoBionicPageSizeMacro) {
+    /**
+     * TODO(b/315034809): switch to error when final decision is made.
+     */
+    if (!NoBionicPageSizeMacroProperty())
+        GTEST_SKIP() << "Device was not built with: PRODUCT_NO_BIONIC_PAGE_SIZE_MACRO := true";
 }
