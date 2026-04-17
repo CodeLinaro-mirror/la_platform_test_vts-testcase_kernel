@@ -77,6 +77,16 @@ DISABLED_TESTS = {
     'syscalls.ioctl_ns05_64bit',  # b/191226869
     'syscalls.ioctl_ns06_32bit',  # b/191224339
     'syscalls.ioctl_ns06_64bit',  # b/191224339
+    'syscalls.ioctl_pidfd02_32bit', # b/465094639
+    'syscalls.ioctl_pidfd02_64bit', # b/465094639
+    'syscalls.ioctl_pidfd03_32bit', # b/465094639
+    'syscalls.ioctl_pidfd03_64bit', # b/465094639
+    'syscalls.ioctl_pidfd04_32bit', # b/465094639
+    'syscalls.ioctl_pidfd04_64bit', # b/465094639
+    'syscalls.ioctl_pidfd05_32bit', # b/465094639
+    'syscalls.ioctl_pidfd05_64bit', # b/465094639
+    'syscalls.ioctl_pidfd06_32bit', # b/465094639
+    'syscalls.ioctl_pidfd06_64bit', # b/465094639
     'syscalls.listmount04_32bit', # b/473940561
     'syscalls.listmount04_64bit', # b/473940561
     'syscalls.madvise06_32bit',  # b/191227034
@@ -109,6 +119,7 @@ DISABLED_TESTS = {
     'syscalls.unshare05_64bit',  # b/463541890
     'syscalls.unlink09_32bit',
     'syscalls.unlink09_64bit',
+    'syscalls.inotify09_64bit',  # b/488191585
 }
 
 # These tests are only disabled for hwasan

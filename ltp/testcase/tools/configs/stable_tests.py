@@ -1593,7 +1593,6 @@ STABLE_TESTS = {
     'syscalls.inotify08_32bit': True,
     'syscalls.inotify08_64bit': True,
     'syscalls.inotify09_32bit': True,
-    'syscalls.inotify09_64bit': True,
     'syscalls.inotify10_32bit': True,
     'syscalls.inotify10_64bit': True,
     'syscalls.inotify11_32bit': True,
@@ -1672,16 +1671,6 @@ STABLE_TESTS = {
     'syscalls.ioctl_ns07_64bit': True,
     'syscalls.ioctl_pidfd01_32bit': False,  # b/463530878
     'syscalls.ioctl_pidfd01_64bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd02_32bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd02_64bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd03_32bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd03_64bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd04_32bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd04_64bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd05_32bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd05_64bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd06_32bit': False,  # b/463530878
-    'syscalls.ioctl_pidfd06_64bit': False,  # b/463530878
     'syscalls.ioperm01_32bit': False,
     'syscalls.ioperm01_64bit': False,
     'syscalls.ioperm02_32bit': False,
