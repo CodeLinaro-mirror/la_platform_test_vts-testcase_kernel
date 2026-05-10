@@ -60,7 +60,6 @@ enum WonderVendorSubCmd {
 class WonderTest : public ::testing::TestWithParam<std::string> {
  public:
   virtual void SetUp() override {
-    std::system("cmd wifi set-scan-always-available disabled");
     std::system("cmd wifi start-restricting-auto-join-to-subscription-id -1");
 
     ASSERT_TRUE(helper_.Init()) << "NetlinkHelper Init failed";
@@ -105,7 +104,6 @@ class WonderTest : public ::testing::TestWithParam<std::string> {
   virtual void TearDown() override {
     helper_.RemoveInterface(WONDER_INTERFACE_NAME);
     std::system("cmd wifi stop-restricting-auto-join-to-subscription-id");
-    std::system("cmd wifi set-scan-always-available enabled");
   }
   bool SendVendorCmd(WonderVendorSubCmd subCmd, const std::string& hexData) {
     return helper_.SendVendorCommand(WONDER_INTERFACE_NAME, WONDER_VENDOR_ID,
@@ -224,6 +222,22 @@ TEST_P(WonderTest, SetRegulatoryDomain) {
 }
 
 TEST_P(WonderTest, GetInterfaceMacAddress) {
+  ASSERT_TRUE(SendVendorCmd(
+      SUBCMD_SET_CHANNEL,
+      "0x08 0x00 0x01 0x00 0x71 0x16 0x00 0x00 0x06 0x00 0x02 0x00 0x02 0x00"));
+  ASSERT_TRUE(SendVendorCmd(
+      SUBCMD_SET_BSSID_FILTER,
+      "0x08 0x00 0x01 0x00 0x00 0x00 0x00 0x00 0x18 0x00 0x02 0x00 0x05 0x00"
+      " 0x01 0x00 0x01 0x00 0x00 0x00 0x0a 0x00 0x02 0x00 0x24 0x05 0x88 0x00"
+      " 0x00 0x01 0x00 0x00"));
+  ASSERT_TRUE(SendVendorCmd(
+      SUBCMD_SET_TX_RATE,
+      "0x08 0x00 0x01 0x00 0x03 0x00 0x00 0x00 0x06 0x00 0x02 0x00 0x02 0x00"
+      " 0x00 0x00 0x08 0x00 0x03 0x00 0x02 0x00 0x00 0x00 0x05 0x00 0x04 0x00"
+      " 0x02 0x00 0x00 0x00 0x05 0x00 0x05 0x00 0x09 0x00 0x00 0x00"));
+  ASSERT_TRUE(SendVendorCmd(SUBCMD_SET_REGULATORY_DOMAIN,
+                            "0x07 0x00 0x01 0x00 0x55 0x53 0x00 0x0"));
+
   // Bring the interface up
   ASSERT_TRUE(helper_.SetInterfaceUp(WONDER_INTERFACE_NAME, true));
   // This command queries the driver for its MAC address. It requires no
